@@ -494,37 +494,32 @@ async def handle_group_message(update: Update, context: ContextTypes.DEFAULT_TYP
     if not message:
         return
     
-    # Логируем ВСЕ доступные данные о сообщении
-    logger.info("=== НОВОЕ СООБЩЕНИЕ ===")
-    logger.info(f"message.text: {message.text}")
-    logger.info(f"message.caption: {message.caption}")
-    logger.info(f"message.photo: {message.photo}")
-    logger.info(f"message.media_group_id: {message.media_group_id}")
-    
-    # Проверяем, есть ли фото и подпись
-    has_photo = bool(message.photo)
-    has_caption = bool(message.caption)
-    
-    logger.info(f"Содержит фото: {has_photo}")
-    logger.info(f"Содержит подпись: {has_caption}")
-    
-    # Собираем текст из всех возможных источников
+    # Собираем текст из ВСЕХ возможных источников
     text = ""
+    
+    # 1. Проверяем обычный текст (для обычных сообщений)
     if message.text:
         text = message.text.lower()
-        logger.info("Используем message.text")
+    
+    # 2. Проверяем подпись к фото (для фото/видео)
     elif message.caption:
         text = message.caption.lower()
-        logger.info("Используем message.caption")
-    else:
-        logger.info("Текст не найден ни в одном источнике")
+    
+    # 3. Проверяем автоматические пересылки из канала (главная проблема!)
+    elif message.forward_origin and message.forward_origin.type == "channel" and message.caption:
+        text = message.caption.lower()
+    
+    # 4. Для медиа-групп (если нужно)
+    elif message.media_group_id and message.caption:
+        text = message.caption.lower()
+    
+    # Логируем для отладки
+    logger.info(f"Обработано сообщение. Тип: {message.chat.type}")
+    logger.info(f"Текст: {bool(message.text)}, Подпись: {bool(message.caption)}, Фото: {bool(message.photo)}")
+    logger.info(f"Извлечённый текст: {text}")
     
     # Проверяем наличие слова "хвалюсь"
-    has_boast = "хвалюсь" in text if text else False
-    logger.info(f"Содержит 'хвалюсь': {has_boast}")
-    
-    # Если нашли слово "хвалюсь" — ставим реакцию
-    if has_boast:
+    if text and "хвалюсь" in text:
         try:
             await context.bot.set_message_reaction(
                 chat_id=message.chat_id,
@@ -535,8 +530,6 @@ async def handle_group_message(update: Update, context: ContextTypes.DEFAULT_TYP
             logger.info("✅ Реакция и комментарий добавлены успешно")
         except Exception as e:
             logger.error(f"❌ Ошибка при реакции: {e}")
-    else:
-        logger.info("❌ Слово 'хвалюсь' не найдено")
 
 # Основная функция
 def main():
