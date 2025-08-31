@@ -491,9 +491,17 @@ async def finalize_report(destination, context: ContextTypes.DEFAULT_TYPE):
 # Обработка постов в группе с "хвалюсь"
 async def handle_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message
-    if not message or not message.text:
+    if not message:
         return
-    text = message.text.lower()
+    
+    # Проверяем ТЕКСТ и ПОДПИСЬ (для фото/видео)
+    text = ""
+    if message.text:
+        text = message.text.lower()
+    elif message.caption:
+        text = message.caption.lower()
+    
+    # Если нашли слово "хвалюсь" — ставим реакцию
     if "хвалюсь" in text:
         try:
             await context.bot.set_message_reaction(
