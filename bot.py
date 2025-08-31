@@ -535,11 +535,13 @@ async def handle_group_message(update: Update, context: ContextTypes.DEFAULT_TYP
 def main():
     application = Application.builder().token(TOKEN).build()
 
+    # Команды
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("add_a_task", add_task))
     application.add_handler(CommandHandler("plan", plan_start))
     application.add_handler(CommandHandler("report", report_start))
 
+    # Кнопки (callback)
     application.add_handler(CallbackQueryHandler(plan_choose_period, pattern=r"^plan_"))
     application.add_handler(CallbackQueryHandler(select_task, pattern=r"^select_task_"))
     application.add_handler(CallbackQueryHandler(manual_task_prompt, pattern=r"^manual_task$"))
@@ -550,12 +552,20 @@ def main():
     application.add_handler(CallbackQueryHandler(add_bonus, pattern=r"^add_bonus$"))
     application.add_handler(CallbackQueryHandler(send_report, pattern=r"^send_report$"))
 
+    # Личные сообщения (для добавления задач и дедлайнов)
     application.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE, receive_manual_task), group=0)
     application.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE, receive_deadline), group=1)
     application.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE, receive_bonus_task), group=3)
 
-    application.add_handler(MessageHandler(filters.TEXT & filters.Chat(chat_id=COMMENT_GROUP_ID), handle_group_message))
+    # --- ВАЖНО: тут исправление! ---
+    # Теперь бот обрабатывает текст + фото/видео/документы с подписями в группе
+    group_filter = (
+        (filters.TEXT | filters.PHOTO | filters.VIDEO | filters.Document.ALL)
+        & filters.Chat(chat_id=COMMENT_GROUP_ID)
+    )
+    application.add_handler(MessageHandler(group_filter, handle_group_message))
 
+    # Запуск бота
     application.run_polling()
 
 if __name__ == '__main__':
