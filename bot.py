@@ -494,7 +494,7 @@ async def handle_group_message(update: Update, context: ContextTypes.DEFAULT_TYP
     if not message:
         return
     
-    # Собираем ВЕСЬ текст из сообщения (текст + подпись к фото/видео)
+    # Собираем ВЕСЬ текст из сообщения (все возможные источники)
     text = ""
     
     # 1. Проверяем обычный текст
@@ -507,11 +507,20 @@ async def handle_group_message(update: Update, context: ContextTypes.DEFAULT_TYP
     
     # 3. Если есть фото (даже без подписи) — проверяем последнее фото в массиве
     if message.photo:
-        # Берем самое большое фото (последнее в массиве)
+        # Берем подпись к фото (если есть)
         if message.caption:
             text = message.caption.lower()
     
-    # 4. Проверяем, есть ли слово "хвалюсь" в тексте
+    # 4. Дополнительная проверка для медиа-групп
+    if message.media_group_id:
+        # Для медиа-групп текст может быть в первом сообщении группы
+        pass  # не нужно для твоего случая
+    
+    # 5. Логируем для отладки
+    logger.info(f"Проверка сообщения: text={bool(message.text)}, caption={bool(message.caption)}, photo={bool(message.photo)}")
+    logger.info(f"Обнаруженный текст: {text}")
+    
+    # 6. Проверяем наличие слова "хвалюсь"
     if text and "хвалюсь" in text:
         try:
             # Ставим реакцию
@@ -524,8 +533,7 @@ async def handle_group_message(update: Update, context: ContextTypes.DEFAULT_TYP
             # Пишем комментарий
             await message.reply_text(choice(reactions))
             
-            # Добавим лог для отладки
-            logger.info(f"Реагирую на пост с фото: {text}")
+            logger.info("Реакция и комментарий добавлены успешно")
             
         except Exception as e:
             logger.error(f"Ошибка при реакции: {e}")
