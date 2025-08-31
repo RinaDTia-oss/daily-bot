@@ -494,22 +494,39 @@ async def handle_group_message(update: Update, context: ContextTypes.DEFAULT_TYP
     if not message:
         return
     
-    # Проверяем ТЕКСТ и ПОДПИСЬ (для фото/видео)
+    # Собираем ВЕСЬ текст из сообщения (текст + подпись к фото/видео)
     text = ""
+    
+    # 1. Проверяем обычный текст
     if message.text:
         text = message.text.lower()
-    elif message.caption:
+    
+    # 2. Проверяем подпись к фото/видео/документу
+    if message.caption:
         text = message.caption.lower()
     
-    # Если нашли слово "хвалюсь" — ставим реакцию
-    if "хвалюсь" in text:
+    # 3. Если есть фото (даже без подписи) — проверяем последнее фото в массиве
+    if message.photo:
+        # Берем самое большое фото (последнее в массиве)
+        if message.caption:
+            text = message.caption.lower()
+    
+    # 4. Проверяем, есть ли слово "хвалюсь" в тексте
+    if text and "хвалюсь" in text:
         try:
+            # Ставим реакцию
             await context.bot.set_message_reaction(
                 chat_id=message.chat_id,
                 message_id=message.message_id,
                 reaction=[ReactionTypeEmoji(emoji="👍")]
             )
+            
+            # Пишем комментарий
             await message.reply_text(choice(reactions))
+            
+            # Добавим лог для отладки
+            logger.info(f"Реагирую на пост с фото: {text}")
+            
         except Exception as e:
             logger.error(f"Ошибка при реакции: {e}")
 
